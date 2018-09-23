@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ScalaSbtSettings">
+    <option name="customLauncherEnabled" value="true" />
+    <option name="customLauncherPath" value="$USER_HOME$/Self_Soft_Dir/sbt/sbt-0.13.13/bin/sbt-launch.jar" />
+    <option name="customVMEnabled" value="true" />
+    <option name="customVMPath" value="/Library/Java/JavaVirtualMachines/jdk1.8.0_121.jdk/Contents/Home" />
+  </component>
+</project>
