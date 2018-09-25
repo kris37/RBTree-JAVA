@@ -1,4 +1,4 @@
-# RedBlackTree AND LLRBTree
+# RedBlackTree AND LLRBTree (Left-Leaning RedBlackTree)
 
 * RedBlackTree 参考算法导论及Java TreeMap的简单实现 
     * insert 增

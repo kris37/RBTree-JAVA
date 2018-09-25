@@ -9,6 +9,7 @@ import java.util.Objects;
  *
  *  <p
  *      简单实现红黑树
+ *          附加size属性
  *  </p>
  *
  */
