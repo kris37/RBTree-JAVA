@@ -28,6 +28,7 @@ public class RedBlackTree<K extends Comparable,V> {
         private Node left;
         private Node right;
         private Node parent;
+        private int size = 1;
         public Node(K key, V value, boolean color){
             this.key = key ;
             this.value = value ;
@@ -115,12 +116,16 @@ public class RedBlackTree<K extends Comparable,V> {
         }
         // 调整红黑树 parent.color 是红色说明 parent不是root节点。只要不是root节点就一定有父节点
         while (x != root && parentOf(x).color == RED) {
+
+            x.size =  reComputeSize(x);
             // 父节点是 祖父节点的左节点(一定是红色)
             if (grandOf(x).left == parentOf(x)) {
                 Node uncle =  grandOf(x).right;
                 // CASE 1 叔父节点是红色
                 if(isRed(uncle)){
                     colorFlip(grandOf(x));
+                    // reSize
+                    x.parent.size = reComputeSize(x.parent);
                     x = grandOf(x);
                 }else{
                 //叔父节点是黑色(null) and  Z型结构
@@ -139,6 +144,7 @@ public class RedBlackTree<K extends Comparable,V> {
                 Node uncle = grandOf(x).left;
                 if(isRed(uncle)){
                      colorFlip(grandOf(x));
+                     x.parent.size = reComputeSize(x.parent);
                      x = grandOf(x);
                 }else {
                     if(x ==  parentOf(x).left){
@@ -152,6 +158,11 @@ public class RedBlackTree<K extends Comparable,V> {
             }
         }
 
+        // compute Size from root to new InsertNode trace
+        while(x != null){
+            x.size = reComputeSize(x);
+            x = parentOf(x);
+        }
         root.color  = BLACK;
     }
 
@@ -188,6 +199,9 @@ public class RedBlackTree<K extends Comparable,V> {
         boolean color = p.color;
         p.color = r.color;
         r.color = color;
+
+        p.size = reComputeSize(p);
+        r.size = reComputeSize(r);
     }
 
 
@@ -213,6 +227,9 @@ public class RedBlackTree<K extends Comparable,V> {
         boolean color = p.color;
         p.color = l.color;
         l.color = color;
+        // reComputeSize
+        p.size = reComputeSize(p);
+        l.size = reComputeSize(l);
     }
 
     private void colorFlip(Node node){
@@ -385,7 +402,33 @@ public class RedBlackTree<K extends Comparable,V> {
         node.parent = node.left = node.right = null;
     }
 
+    public int size(){
+        return size(root);
+    }
+    private int size(Node node){
+        return node == null ? 0: node.size;
+    }
+    private int reComputeSize(Node node){
+        return size(node.left) + size(node.right) + 1;
+    }
 
+
+    public Node select(int n){
+        if (n > size(root) || n < 1){
+            return null;
+        }
+        return select(root,n);
+    }
+    private Node select(Node node,int n){
+        int rank = size(node.left) + 1;
+        if(n > rank){
+            return select(node.right,n - rank);
+        }else if(n <  rank){
+            return select(node.left,n);
+        }else {
+            return node;
+        }
+    }
 
 
 
@@ -397,7 +440,14 @@ public class RedBlackTree<K extends Comparable,V> {
         RedBlackTree<Integer, Integer> integerIntegerRedBlackTree = new RedBlackTree<>();
         integers.forEach(each -> integerIntegerRedBlackTree.insert(each,each));
 
-        ArrayList<Integer> deleteList = Lists.newArrayList( 2,5,3, 4, 5, 13,6, 7, 8, 9, 10,16,20,17,18,19,11,12,13,1,14);
+        for (int i = 1;i<integerIntegerRedBlackTree.size();i++){
+            int key = integerIntegerRedBlackTree.select(i).key;
+            System.out.println(String.format("select rank = %d  key is: ",i)+ key );
+            //System.out.println(String.format("select key = %d  rank is: ",key)+ avl.rank(key) );
+
+        }
+
+       ArrayList<Integer> deleteList = Lists.newArrayList( 2,5,3, 4, 5, 13,6, 7, 8, 9, 10,16,20,17,18,19,11,12,13,1,14);
         deleteList.forEach(each -> integerIntegerRedBlackTree.delete(each));
 
 

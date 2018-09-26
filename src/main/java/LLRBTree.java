@@ -15,7 +15,6 @@ import java.util.Objects;
  *     Left-Leaning RBTree
  *      原版参考 《算法》 第四版 https://algs4.cs.princeton.edu/33balanced/RedBlackBST.java.html
  *      中文参考 https://cloud.tencent.com/developer/article/1193097
- *
  *     值得时刻牢记的是：LLRB树的右子树不会比对应的左子树大(if node.left is null ,node.right must be null)
  * <br>
  */
