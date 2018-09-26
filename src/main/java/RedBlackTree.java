@@ -1,4 +1,6 @@
 import com.google.common.collect.Lists;
+import org.omg.PortableInterceptor.SYSTEM_EXCEPTION;
+import sun.jvm.hotspot.utilities.Assert;
 
 import java.util.ArrayList;
 import java.util.Objects;
@@ -116,7 +118,6 @@ public class RedBlackTree<K extends Comparable,V> {
         }
         // 调整红黑树 parent.color 是红色说明 parent不是root节点。只要不是root节点就一定有父节点
         while (x != root && parentOf(x).color == RED) {
-
             x.size =  reComputeSize(x);
             // 父节点是 祖父节点的左节点(一定是红色)
             if (grandOf(x).left == parentOf(x)) {
@@ -271,6 +272,7 @@ public class RedBlackTree<K extends Comparable,V> {
      * @param key
      */
     public void delete(K key){
+        // todo reSize
         if (key == null) throw new IllegalArgumentException(" delete key is null !");
         Node serach = search(root, key);
         if(serach== null){
@@ -297,9 +299,19 @@ public class RedBlackTree<K extends Comparable,V> {
         // 此处 x 最多只有一个子节点,并且if y!=null y的双子一定都是 null（如果 y!=null 那么其实 y一定是 RED）
         Node y = (x.left == null? x.right:x.left);
         if(y != null){
+
+            Assert.that(y.color == RED,"y color is RED and y !=null");
+
             replaceAndBreak(x,y);
-            if(x.color == BLACK)
+            if(x.color == BLACK){
                 deleteFixUp(y);
+                Assert.that(y.color == BLACK,"y color is BLACK and y !=null");
+            }
+            // todo reSize
+            while (y != null){
+                y.size = reComputeSize(y);
+                y = parentOf(y);
+            }
         }else if(x.parent == null){
             // y is null
             root = null;
@@ -313,7 +325,13 @@ public class RedBlackTree<K extends Comparable,V> {
             }else {
                 x.parent.right = null;
             }
+            y = parentOf(x);
             breakNode(x);
+            //todo resize
+            while (y != null){
+                y.size = reComputeSize(y);
+                y = parentOf(y);
+            }
         }
 
     }
@@ -323,14 +341,17 @@ public class RedBlackTree<K extends Comparable,V> {
      * @param rep 替代的节点
      *            替代节点 要么是 null 要么是红色节点
      *            具体逻辑见算法导论 RBTree
+     * resize
      *
      */
     private void deleteFixUp(Node rep){
         while(rep != root && !isRed(rep)){
+
+            // 进入到此处说明 一定是删除掉了一个黑色节点，那么就需要补充一个黑色节点
             // 删除节点是左孩子
             if (rep == leftOf(parentOf(rep))){
                 Node sib = rightOf(parentOf(rep));
-                //CASE 1 rep 节点的兄弟节点是RED 则left旋转 rep.parent(一定是黑色)
+                //CASE 1 rep 节点的兄弟节点是RED 则left旋转 rep.parent(一定是黑色) sib 变为黑色 转移到 2，3，4 状态。2，3，4 都是判断sib 子节点的颜色状态
                 if(isRed(sib)){
                     leftRotate(parentOf(rep));
                     sib = rightOf(parentOf(rep));
@@ -430,25 +451,49 @@ public class RedBlackTree<K extends Comparable,V> {
         }
     }
 
+    public int rank(K key){
+        if(Objects.isNull(key)){
+            throw new IllegalArgumentException(" rank key is null !");
+        }
+        return rank(root,key);
+    }
+    private int rank(Node node,K key){
+        int cmp = 0;
+        int rank = 0;
+        while (node != null){
+            cmp = key.compareTo(node.key);
+            if(cmp > 0){
+                rank = rank + size(node.left) + 1;
+                node = node.right;
+            }else if(cmp <0 ){
+                 node = node.left;
+            }else {
+                return rank + size(node.left) + 1;
+            }
+        }
+        return -1;
+    }
+
 
 
 
 
     public static void main(String []args){
 
-        ArrayList<Integer> integers = Lists.newArrayList( 10,11,12,13,14,15,16,17,18,19,20,1, 2, 3, 4, 5, 6, 7, 8, 9);
+        ArrayList<Integer> integers = Lists.newArrayList( 10,11,12,13,14,15,16, 2, 3, 4, 5, 6, 7, 8, 9);//17,18,19,20,1,
         RedBlackTree<Integer, Integer> integerIntegerRedBlackTree = new RedBlackTree<>();
         integers.forEach(each -> integerIntegerRedBlackTree.insert(each,each));
 
-        for (int i = 1;i<integerIntegerRedBlackTree.size();i++){
+        for (int i = 1;i<=integerIntegerRedBlackTree.size();i++){
             int key = integerIntegerRedBlackTree.select(i).key;
             System.out.println(String.format("select rank = %d  key is: ",i)+ key );
-            //System.out.println(String.format("select key = %d  rank is: ",key)+ avl.rank(key) );
+            System.out.println(String.format("select key = %d  rank is: ",key)+ integerIntegerRedBlackTree.rank(key) );
 
         }
 
        ArrayList<Integer> deleteList = Lists.newArrayList( 2,5,3, 4, 5, 13,6, 7, 8, 9, 10,16,20,17,18,19,11,12,13,1,14);
         deleteList.forEach(each -> integerIntegerRedBlackTree.delete(each));
+        System.out.println("stop");
 
 
     }
