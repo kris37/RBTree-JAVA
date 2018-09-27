@@ -9,16 +9,18 @@ import java.util.Objects;
  *  @version 0.1
  *
  *  <p
- *      简单实现红黑树
+ *      IntervalTree basic of RBTree
  *          附加size属性
+ *          max 属性
+ *
  *  </p>
  *
  */
-public class RedBlackTree<K extends Comparable,V> {
+public class IntervalRBTree<K extends Comparable,V> {
     public static final boolean RED = true ;
     public static final boolean BLACK = false ;
     private Node root;
-    public RedBlackTree(){
+    public IntervalRBTree(){
     }
 
     private class Node{
@@ -480,7 +482,7 @@ public class RedBlackTree<K extends Comparable,V> {
     public static void main(String []args){
 
         ArrayList<Integer> integers = Lists.newArrayList( 10,11,12,13,14,15,16, 2, 3, 4, 5, 6, 7, 8, 9);//17,18,19,20,1,
-        RedBlackTree<Integer, Integer> integerIntegerRedBlackTree = new RedBlackTree<>();
+        IntervalRBTree<Integer, Integer> integerIntegerRedBlackTree = new IntervalRBTree<>();
         integers.forEach(each -> integerIntegerRedBlackTree.insert(each,each));
 
         for (int i = 1;i<=integerIntegerRedBlackTree.size();i++){
