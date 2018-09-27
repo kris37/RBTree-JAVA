@@ -18,6 +18,7 @@ import java.util.Objects;
  *     值得时刻牢记的是：LLRB树的右子树不会比对应的左子树大(if node.left is null ,node.right must be null)
  * <br>
  */
+@Deprecated
 public class LLRBTree<K extends Comparable , V> {
     public static final boolean RED = true;
     public static final boolean BLACK = false;
