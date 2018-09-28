@@ -10,7 +10,7 @@ import java.util.Objects;
  *
  *  <p
  *      简单实现红黑树
- *          附加size属性
+ *          附加size属性 实际上在 insert 和 delete 的过程中其实在查找的时候就可以对所经过路径上的所有节点 都 +1 or -1
  *  </p>
  *
  */

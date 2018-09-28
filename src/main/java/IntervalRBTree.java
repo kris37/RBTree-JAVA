@@ -1,4 +1,6 @@
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.Lists;
+import com.sun.tools.javac.util.List;
 import sun.jvm.hotspot.utilities.Assert;
 
 import java.util.ArrayList;
@@ -10,32 +12,95 @@ import java.util.Objects;
  *
  *  <p
  *      IntervalTree basic of RBTree
- *          附加size属性
- *          max 属性
- *
+ *      附加size属性
+ *      max 属性
  *  </p>
  *
  */
-public class IntervalRBTree<K extends Comparable,V> {
+public class IntervalRBTree< T extends Comparable> {
     public static final boolean RED = true ;
     public static final boolean BLACK = false ;
     private Node root;
     public IntervalRBTree(){
     }
 
-    private class Node{
+    /**
+     *  interval field obj
+     * @param <T>
+     */
+    public static class Interval<T extends Comparable> implements Comparable{
+        private T low;
+        private T high;
+        public Interval(T low, T high){
+            if(low.compareTo(high) > 0){
+                throw new IllegalArgumentException(" interval build low > high !");
+            }
+            this.low = low;
+            this.high = high;
+        }
 
-        private K key ;
-        private V value ;
+        public T getLow() {
+            return low;
+        }
+
+        public T getHigh() {
+            return high;
+        }
+
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+
+            Interval<?> intrval = (Interval<?>) o;
+
+            if (!low.equals(intrval.low)) return false;
+            return high.equals(intrval.high);
+        }
+
+        @Override
+        public int hashCode() {
+            int result = low.hashCode();
+            result = 31 * result + high.hashCode();
+            return result;
+        }
+
+        public static <T extends Comparable> Interval build(T low, T high){
+            return new Interval<T>(low,high);
+        }
+
+        @Override
+        public int compareTo(Object o) {
+               int cmp =  this.low .compareTo(((Interval) o).low);
+               return cmp == 0? this.high.compareTo(((Interval) o).high) : cmp;
+        }
+
+        @Override
+        public String toString() {
+            return MoreObjects.toStringHelper(this)
+                    .add("low", low)
+                    .add("high", high)
+                    .toString();
+        }
+    }
+
+    /**
+     * 计算逻辑的变化
+     */
+    private class Node {
+
+        private Interval<T> key ;
+        private T max;
         private boolean color = RED ;
         private Node left;
         private Node right;
         private Node parent;
         private int size = 1;
-        public Node(K key, V value, boolean color){
+        public Node(Interval<T> key, boolean color){
             this.key = key ;
-            this.value = value ;
             this.color = color;
+            this.max = key.getHigh();
         }
 
         public void setLeft(Node left) {
@@ -47,6 +112,8 @@ public class IntervalRBTree<K extends Comparable,V> {
             this.right = right;
             if(right != null) right.parent = this;
         }
+
+
     }
 
     private boolean isRed(Node node){
@@ -54,7 +121,7 @@ public class IntervalRBTree<K extends Comparable,V> {
         return node.color == RED;
     }
     // search 查找
-    public Node search(K key){
+    public Node search(Interval<T> key){
         if(Objects.isNull(key)) {
             throw new IllegalArgumentException("key is null !");
         }
@@ -63,7 +130,7 @@ public class IntervalRBTree<K extends Comparable,V> {
 
     }
 
-    private Node search(Node node, K key){
+    private Node search(Node node, Interval<T> key){
         while(!Objects.isNull(node)){
             int cmp = key.compareTo(node.key);
             if(cmp > 0 ){
@@ -77,19 +144,20 @@ public class IntervalRBTree<K extends Comparable,V> {
         return null;
     }
 
-    // insert and update
+
     /**
-     *
+     * insert and update max and size
+     * 插入查找的时候顺带进行 update max 操作
+     * 因为插入的时候有可能是更新操作，所以不能自上而下进行resize + 1 操作
      * @param key
-     * @param value
      * @return
      */
-    public void insert(K key,V value) {
+    public void insert(Interval<T> key) {
         if(Objects.isNull(key)){
             throw new IllegalArgumentException("key is null !");
         }
         if(root == null) {
-            root = new Node(key,value,BLACK);
+            root = new Node(key,BLACK);
             return;
         }
         Node t = root;
@@ -103,13 +171,12 @@ public class IntervalRBTree<K extends Comparable,V> {
             }else if(cmp < 0 ){
                 t = t.left;
             }else{
-                t.value = value;
                 return;
             }
 
         }while (t != null);
 
-        Node x = new Node(key,value,RED);
+        Node x = new Node(key,RED);
         if(cmp > 0){
             parent.right = x;
             x.parent = parent;
@@ -120,6 +187,7 @@ public class IntervalRBTree<K extends Comparable,V> {
         // 调整红黑树 parent.color 是红色说明 parent不是root节点。只要不是root节点就一定有父节点
         while (x != root && parentOf(x).color == RED) {
             x.size =  reComputeSize(x);
+            x.max = reMax(x);
             // 父节点是 祖父节点的左节点(一定是红色)
             if (grandOf(x).left == parentOf(x)) {
                 Node uncle =  grandOf(x).right;
@@ -128,6 +196,7 @@ public class IntervalRBTree<K extends Comparable,V> {
                     colorFlip(grandOf(x));
                     // reSize
                     x.parent.size = reComputeSize(x.parent);
+                    x.parent.max = reMax(x.parent);
                     x = grandOf(x);
                 }else{
                 //叔父节点是黑色(null) and  Z型结构
@@ -147,6 +216,7 @@ public class IntervalRBTree<K extends Comparable,V> {
                 if(isRed(uncle)){
                      colorFlip(grandOf(x));
                      x.parent.size = reComputeSize(x.parent);
+                     x.parent.max = reMax(x.parent);
                      x = grandOf(x);
                 }else {
                     if(x ==  parentOf(x).left){
@@ -163,6 +233,7 @@ public class IntervalRBTree<K extends Comparable,V> {
         // compute Size from root to new InsertNode trace
         while(x != null){
             x.size = reComputeSize(x);
+            x.max = reMax(x);
             x = parentOf(x);
         }
         root.color  = BLACK;
@@ -203,7 +274,9 @@ public class IntervalRBTree<K extends Comparable,V> {
         r.color = color;
 
         p.size = reComputeSize(p);
+        p.max = reMax(p);
         r.size = reComputeSize(r);
+        r.max = reMax(r);
     }
 
 
@@ -231,7 +304,9 @@ public class IntervalRBTree<K extends Comparable,V> {
         l.color = color;
         // reComputeSize
         p.size = reComputeSize(p);
+        p.max = reMax(p);
         l.size = reComputeSize(l);
+        l.max = reMax(l);
     }
 
     private void colorFlip(Node node){
@@ -270,9 +345,10 @@ public class IntervalRBTree<K extends Comparable,V> {
     /**
      * RED-Black Tree delete
      * 参考算法导论及 TreeMap src
+     *
      * @param key
      */
-    public void delete(K key){
+    public void delete(Interval<T> key){
         // todo reSize
         if (key == null) throw new IllegalArgumentException(" delete key is null !");
         Node serach = search(root, key);
@@ -289,13 +365,13 @@ public class IntervalRBTree<K extends Comparable,V> {
          * 这里只找右子树的最小节点替换
          */
         if(serach.right != null && serach.left != null){
-            Node max = serach.right;
-            while (max.left != null){
-                max = max.left;
+            Node maxNode = serach.right;
+            while (maxNode.left != null){
+                maxNode = maxNode.left;
             }
-            x  = max;
+            x  = maxNode;
             serach.key = x.key;
-            serach.value = x.value;
+            serach.max = x.max;
         }
         // 此处 x 最多只有一个子节点,并且if y!=null y的双子一定都是 null（如果 y!=null 那么其实 y一定是 RED）
         Node y = (x.left == null? x.right:x.left);
@@ -311,6 +387,7 @@ public class IntervalRBTree<K extends Comparable,V> {
             // todo reSize
             while (y != null){
                 y.size = reComputeSize(y);
+                y.max = reMax(y);
                 y = parentOf(y);
             }
         }else if(x.parent == null){
@@ -331,6 +408,7 @@ public class IntervalRBTree<K extends Comparable,V> {
             //todo resize
             while (y != null){
                 y.size = reComputeSize(y);
+                y.max = reMax(y);
                 y = parentOf(y);
             }
         }
@@ -452,13 +530,13 @@ public class IntervalRBTree<K extends Comparable,V> {
         }
     }
 
-    public int rank(K key){
+    public int rank(Interval<T> key){
         if(Objects.isNull(key)){
             throw new IllegalArgumentException(" rank key is null !");
         }
         return rank(root,key);
     }
-    private int rank(Node node,K key){
+    private int rank(Node node, Interval<T> key){
         int cmp = 0;
         int rank = 0;
         while (node != null){
@@ -475,26 +553,89 @@ public class IntervalRBTree<K extends Comparable,V> {
         return -1;
     }
 
+    private T max (Node node){
+        if(node == null) return null;
+        return node.max;
+    }
+
+    /**
+     * math.max(node.high,node.left.max,node.right.max)
+     * @param node
+     * @return
+     */
+    private T reMax(Node node){
+
+        T t = selectMax(max(node.left),max(node.right),node.key.getHigh());
+        return t;
+    }
 
 
+    private T selectMax(T... params){
 
+        T t = params[0];
+        for (int i = 1; i < params.length; i++) {
+            if(t == null){
+                t = params[i];
+                continue;
+            }
+            if(params[i] != null){
+                t = t.compareTo(params[i]) > 0 ? t:params[i];
+            }
+
+        }
+        return t;
+    }
+
+    /**
+     *  区间树查询 key ∏ v = Ø
+     * @param key
+     * @return
+     */
+    public Interval intervalSearch(Interval<T> key){
+        Node x = root;
+        while (x != null && !overlap(key,x.key)){
+            if(x.left!=null && max(x.left).compareTo(key.getLow()) >= 0){
+                x = x.left;
+            }else {
+                x = x.right;
+            }
+        }
+        return x == null ? null:x.key;
+    }
+
+    /**
+     *  查找所有交集数据
+     *  采用广度优先的策略进行查找减枝
+     * @param key
+     * @return
+     */
+    public List<Interval> intervalSearchAll(Interval<T> key){
+        //todo
+        return null;
+    }
+
+    /**
+     *  计算 m 与 n 是否存在相交部分
+     * @param m
+     * @param n
+     * @return
+     */
+    private boolean overlap(Interval<T> m,Interval<T> n){
+
+        return !(m.getHigh().compareTo(n.getLow()) < 0 ||
+                m.getLow().compareTo(n.getHigh()) > 0 );
+
+    }
 
     public static void main(String []args){
 
         ArrayList<Integer> integers = Lists.newArrayList( 10,11,12,13,14,15,16, 2, 3, 4, 5, 6, 7, 8, 9);//17,18,19,20,1,
-        IntervalRBTree<Integer, Integer> integerIntegerRedBlackTree = new IntervalRBTree<>();
-        integers.forEach(each -> integerIntegerRedBlackTree.insert(each,each));
-
-        for (int i = 1;i<=integerIntegerRedBlackTree.size();i++){
-            int key = integerIntegerRedBlackTree.select(i).key;
-            System.out.println(String.format("select rank = %d  key is: ",i)+ key );
-            System.out.println(String.format("select key = %d  rank is: ",key)+ integerIntegerRedBlackTree.rank(key) );
-
+        IntervalRBTree<Integer> tree = new IntervalRBTree<Integer>();
+        for (Integer integer : integers) {
+            Interval<Integer> integerInterval = new Interval<>(integer, integer + 5);
+            tree.insert(integerInterval);
         }
-
-       ArrayList<Integer> deleteList = Lists.newArrayList( 2,5,3, 4, 5, 13,6, 7, 8, 9, 10,16,20,17,18,19,11,12,13,1,14);
-        deleteList.forEach(each -> integerIntegerRedBlackTree.delete(each));
-        System.out.println("stop");
+        Interval node = tree.intervalSearch(new Interval<Integer>(18, 20));
 
 
     }
